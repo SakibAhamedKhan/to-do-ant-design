@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { ProTable } from '@ant-design/pro-components';
 import { useState } from 'react';
 import { Button, DatePicker, Form, Input, Modal, Select, Space, Tag } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import moment from 'moment';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 const { Option } = Select;
 
 
@@ -11,8 +12,10 @@ const { Option } = Select;
 
 const Todo = () => {
     const searchInput = useRef(null);
+    const [editingTask, setEditingTask] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
-
+    const [modalVisible2, setModalVisible2] = useState(false);
+    const [form] = Form.useForm();
 
     const handleSearch = (selectedKeys, confirm, dataIndex) => {
         confirm();
@@ -166,8 +169,30 @@ const Todo = () => {
         {
             key: 'status',
             title: 'Status',
-            dataIndex: 'status',
+            render: (record) => {
+                console.log(record);
+                return (
+                    <>
+                        {
+                            (Date.now() > record.endAt) ?
+                                <p>Overdue</p>
+                                :
+                                <p>{record.status}</p>
+                        }
+                    </>
+                )
+            }
         },
+        {
+            key: 'action',
+            title: 'Action',
+            render: (record) => {
+                return <>
+                    <EditOutlined onClick={() => onEditTask(record)} />
+                    <DeleteOutlined onClick={() => onDeleteTask(record)} style={{ color: 'red', marginLeft: 13 }} />
+                </>
+            }
+        }
     ]
 
     const onFinish = (value) => {
@@ -186,6 +211,7 @@ const Todo = () => {
             }
             return [...pre, data];
         })
+        form.resetFields();
         setModalVisible(false);
     }
     const range = (start, end) => {
@@ -203,13 +229,31 @@ const Todo = () => {
 
     const disabledDateTime = (current) => ({
         disabledHours: () => {
-            if(current < moment().endOf('day')){
-            return range(0, 24).splice(0,moment().hours())
+            if (current < moment().endOf('day')) {
+                return range(0, 24).splice(0, moment().hours())
             }
             return;
         },
     });
 
+    const onEditTask = (record) => {
+        setModalVisible2(true);
+        setEditingTask(record);
+    }
+    const onDeleteTask = (record) => {
+        Modal.confirm({
+            title: `Are you sure to delete "${record.title}" ?`,
+            okText: 'Yes',
+            okType: 'danger',
+            onOk: () => {
+                setTodoData(pre => {
+                    return pre.filter(task => task.id !== record.id);
+                })
+            }
+        })
+    }
+    console.log(editingTask);
+    const dateFormat = "YYYY-MM-DD";
     return (
         <div style={{
             width: '1200px',
@@ -323,6 +367,53 @@ const Todo = () => {
                         Submit
                     </Button>
                 </Form>
+            </Modal>
+
+
+            {/* Edit Modal */}
+            <Modal
+                title="Update this task"
+                style={{
+                    top: 20,
+                }}
+                visible={modalVisible2}
+                onCancel={() => setModalVisible2(false)}
+                onOk={() => setModalVisible2(false)}
+                okText='Save'
+                initialValues={editingTask}
+            >
+                <Form.Item
+                    label="Title"
+                >
+                    <Input value={editingTask?.title} onChange={(e) => {
+                        setEditingTask(pre => {
+                            return { ...pre, title: e.target.value }
+                        })
+                    }} showCount maxLength={100} />
+                </Form.Item>
+                <Form.Item
+                    label="Description"
+                >
+                    <Input.TextArea value={editingTask?.description} onChange={(e) => {
+                        setEditingTask(pre => {
+                            return { ...pre, description: e.target.value }
+                        })
+                    }} showCount maxLength={1000} />
+                </Form.Item>
+                <Form.Item
+                    label="Due Date"
+                    name='endAt'
+                >
+                    
+                    <DatePicker
+                        format="YYYY-MM-DD HH:mm:ss"
+                        disabledDate={disabledDate}
+                        disabledTime={disabledDateTime}
+                        // showTime={{ defaultValue: moment('00:00:00', 'HH:mm:ss') }
+                        defaultValue={moment(editingTask?.endAt)}
+                    />
+                </Form.Item>
+
             </Modal>
         </div>
     );
