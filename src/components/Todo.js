@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { ProTable } from '@ant-design/pro-components';
+import React, { useEffect, useRef } from 'react';
+import { ProTable, useRefFunction } from '@ant-design/pro-components';
 import { useState } from 'react';
 import { Button, DatePicker, Form, Input, Modal, Select, Space, Tag } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
@@ -13,6 +13,7 @@ const { Option } = Select;
 const Todo = () => {
     const searchInput = useRef(null);
     const [editingTask, setEditingTask] = useState(null);
+    const [uniqueTags, setUniqueTags] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [modalVisible2, setModalVisible2] = useState(false);
     const [form] = Form.useForm();
@@ -115,24 +116,76 @@ const Todo = () => {
             description: 'Programming is Started with "Hello World" always',
             endAt: Date.now() - 200000,
             tags: ['coding', 'problem'],
-            status: 'Running',
+            status: 'Overdue',
+
+        },
+        {
+            id: 3,
+            createAt: Date.now() - 50000,
+            title: 'Ant Design',
+            description: 'Ant Design is a React UI library that has a plethora of easy-to-use components that are useful for building elegant user interfaces. Created by Chinese conglomerate Alibaba, Ant Design is used by several big names: Alibaba (of course), Tencent, Baidu, and more.',
+            endAt: Date.now() + 900000,
+            tags: ['ant design'],
+            status: 'Working',
+
+        },
+        {
+            id: 3,
+            createAt: Date.now() - 50000,
+            title: 'Ant Design Pro table',
+            description: 'Ant Design is a React UI library that has a plethora of easy-to-use components that are useful for building elegant user interfaces. Created by Chinese conglomerate Alibaba, Ant Design is used by several big names: Alibaba (of course), Tencent, Baidu, and more.',
+            endAt: Date.now() - 900000,
+            tags: ['ant design', 'pro table'],
+            status: 'Done',
 
         },
 
     ])
+    const getUniqueTags = () => {
+        let arr = [];
+        for (let i = 0; i < todoData.length; i++) {
+            for (let j = 0; j < todoData[i].tags.length; j++) {
+                arr.push(todoData[i].tags[j]);
+            }
+        }
 
+        console.log(arr);
+        arr = arr.filter(function (value, index, array) {
+            return array.indexOf(value) === index;
+        });
+        console.log(arr);
+
+        let finalArray = []
+        for (let i = 0; i < arr.length; i++) {
+            finalArray.push({
+                text: arr[i],
+                value: arr[i],
+            });
+        }
+        return finalArray;
+    }
+    useEffect(() => {
+        const a = getUniqueTags();
+        setUniqueTags(a);
+    }, [todoData]);
     const columns = [
         {
             key: 'createAt',
             title: 'Creation Time',
             dataIndex: 'createAt',
             valueType: 'dateTime',
+            sorter:(record1, record2) => {
+                return record1.createAt - record2.createAt;
+            }
         },
         {
             key: 'title',
             title: 'Title',
             dataIndex: 'title',
             ...getColumnSearchProps('title'),
+            sorter:(record1, record2) => {
+                return record1.title > record2.title;
+            }
 
         },
         {
@@ -141,17 +194,22 @@ const Todo = () => {
             dataIndex: 'description',
             ...getColumnSearchProps('description'),
             width: 500,
+            sorter:(record1, record2) => {
+                return record1.description > record2.description;
+            }
         },
         {
             key: 'endAt',
             title: 'Due Date',
             dataIndex: 'endAt',
             valueType: 'dateTime',
+            sorter:(record1, record2) => {
+                return record1.endAt - record2.endAt;
+            }
         },
         {
             key: 'tags',
             title: 'Tags',
-            dataIndex: 'tags',
             render: (_, { tags }) => (
                 <>
                     {tags.map(tag => {
@@ -164,23 +222,45 @@ const Todo = () => {
                     })}
                 </>
             ),
-            ...getColumnSearchProps('tags'),
+
+            filters: [...uniqueTags],
+            onFilter: (value, record) => {
+                const a = record.tags.map(tag => tag === value);
+                for(let i = 0; i < a.length; i++){
+                    if(a[i] === true){
+                        return true;
+                    }
+                }
+                return false;
+            }
+
         },
         {
             key: 'status',
             title: 'Status',
             render: (record) => {
-                // console.log(record);
                 return (
                     <>
                         {
-                            (Date.now() > record.endAt &&  record.status !== 'Done') ?
+                            (Date.now() > record.endAt && record.status !== 'Done') ?
                                 <p>Overdue</p>
                                 :
                                 <p>{record.status}</p>
                         }
                     </>
                 )
+            },
+            filters: [
+                { text: 'Open', value: 'Open' },
+                { text: 'Working', value: 'Working' },
+                { text: 'Done', value: 'Done' },
+                { text: 'Overdue', value: 'Overdue' },
+            ],
+            onFilter: (value, record) => {
+                if (Date.now() > record.endAt && record.status !== 'Done') {
+                    return 'Overdue' === value;
+                }
+                return record.status === value;
             }
         },
         {
@@ -198,7 +278,7 @@ const Todo = () => {
 
     const onFinish = (value) => {
         console.log(value);
-        const time = value.dueDate._d;
+        const time = value?.dueDate?._d;
         let date = new Date(time);
         setTodoData(pre => {
             const data = {
@@ -207,7 +287,7 @@ const Todo = () => {
                 title: value.title,
                 description: value.description,
                 endAt: value.dueDate ? date.getTime() : undefined,
-                tags: value.tags,
+                tags: value.tags ? value.tags : [],
                 status: 'Open',
             }
             return [...pre, data];
@@ -255,7 +335,8 @@ const Todo = () => {
             }
         })
     }
-    console.log(editingTask);
+
+
     const dateFormat = "YYYY-MM-DD";
     return (
         <div style={{
@@ -353,20 +434,6 @@ const Todo = () => {
                         </Select>
                     </Form.Item>
 
-                    {/* <Form.Item
-                        name="status"
-                        label="Status"
-                    >
-                        <Select
-                            defaultValue={{ value: 'open' }}
-                            placeholder="Please select favourite colors">
-                            <Option value="open">OPEN</Option>
-                            <Option value="working">WORKING</Option>
-                            <Option value="done">DONE</Option>
-                            <Option value="overdue">OVERDUE</Option>
-                        </Select>
-                    </Form.Item> */}
-
                     <Button type="primary" htmlType="submit">
                         Submit
                     </Button>
@@ -444,14 +511,13 @@ const Todo = () => {
                     <Select
                         onChange={(e) => {
                             setEditingTask(pre => {
-                                return {...pre, status: e};
+                                return { ...pre, status: e };
                             })
                         }}
                         placeholder="Please select Status">
                         <Option value="Open">OPEN</Option>
                         <Option value="Working">WORKING</Option>
                         <Option value="Done">DONE</Option>
-                        <Option value="Overdue">OVERDUE</Option>
                     </Select>
                 </Form.Item>
 
