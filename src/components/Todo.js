@@ -170,11 +170,11 @@ const Todo = () => {
             key: 'status',
             title: 'Status',
             render: (record) => {
-                console.log(record);
+                // console.log(record);
                 return (
                     <>
                         {
-                            (Date.now() > record.endAt) ?
+                            (Date.now() > record.endAt &&  record.status !== 'Done') ?
                                 <p>Overdue</p>
                                 :
                                 <p>{record.status}</p>
@@ -187,6 +187,7 @@ const Todo = () => {
             key: 'action',
             title: 'Action',
             render: (record) => {
+                console.log(record);
                 return <>
                     <EditOutlined onClick={() => onEditTask(record)} />
                     <DeleteOutlined onClick={() => onDeleteTask(record)} style={{ color: 'red', marginLeft: 13 }} />
@@ -211,8 +212,9 @@ const Todo = () => {
             }
             return [...pre, data];
         })
-        form.resetFields();
+
         setModalVisible(false);
+        form.resetFields();
     }
     const range = (start, end) => {
         const result = [];
@@ -241,6 +243,7 @@ const Todo = () => {
         setEditingTask(record);
     }
     const onDeleteTask = (record) => {
+        console.log(record);
         Modal.confirm({
             title: `Are you sure to delete "${record.title}" ?`,
             okText: 'Yes',
@@ -296,6 +299,7 @@ const Todo = () => {
             >
                 <Form
                     onFinish={onFinish}
+                    form={form}
                 >
                     <Form.Item
                         name='title'
@@ -377,8 +381,23 @@ const Todo = () => {
                     top: 20,
                 }}
                 visible={modalVisible2}
-                onCancel={() => setModalVisible2(false)}
-                onOk={() => setModalVisible2(false)}
+                onCancel={() => {
+                    setModalVisible2(false);
+                    setEditingTask(null);
+                }}
+                onOk={() => {
+                    setModalVisible2(false);
+                    setTodoData(pre => {
+                        return pre.map(task => {
+                            if (task.id === editingTask.id) {
+                                return editingTask;
+                            } else {
+                                return task;
+                            }
+                        })
+                    })
+
+                }}
                 okText='Save'
                 initialValues={editingTask}
             >
@@ -396,6 +415,7 @@ const Todo = () => {
                 >
                     <Input.TextArea value={editingTask?.description} onChange={(e) => {
                         setEditingTask(pre => {
+                            console.log(editingTask);
                             return { ...pre, description: e.target.value }
                         })
                     }} showCount maxLength={1000} />
@@ -404,14 +424,35 @@ const Todo = () => {
                     label="Due Date"
                     name='endAt'
                 >
-                    
+
                     <DatePicker
                         format="YYYY-MM-DD HH:mm:ss"
                         disabledDate={disabledDate}
                         disabledTime={disabledDateTime}
-                        // showTime={{ defaultValue: moment('00:00:00', 'HH:mm:ss') }
-                        defaultValue={moment(editingTask?.endAt)}
+                        showTime={{ defaultValue: moment('00:00:00', 'HH:mm:ss') }}
+                        onChange={(e) => {
+                            let date = new Date(e._d);
+                            setEditingTask(pre => {
+                                return { ...pre, endAt: e._d ? date.getTime() : undefined }
+                            })
+                        }}
                     />
+                </Form.Item>
+                <Form.Item
+                    label="Status"
+                >
+                    <Select
+                        onChange={(e) => {
+                            setEditingTask(pre => {
+                                return {...pre, status: e};
+                            })
+                        }}
+                        placeholder="Please select Status">
+                        <Option value="Open">OPEN</Option>
+                        <Option value="Working">WORKING</Option>
+                        <Option value="Done">DONE</Option>
+                        <Option value="Overdue">OVERDUE</Option>
+                    </Select>
                 </Form.Item>
 
             </Modal>
