@@ -1,14 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { ProTable, useRefFunction } from '@ant-design/pro-components';
+import { ProTable } from '@ant-design/pro-components';
 import { useState } from 'react';
 import { Button, DatePicker, Form, Input, Modal, Select, Space, Tag } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import moment from 'moment';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 const { Option } = Select;
-
-
-
 
 const Todo = () => {
     const searchInput = useRef(null);
@@ -22,11 +19,11 @@ const Todo = () => {
         confirm();
     };
 
-
-
     const handleReset = (clearFilters) => {
         clearFilters();
     };
+
+    // For Search in Column
     const getColumnSearchProps = (dataIndex) => ({
         filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
             <div
@@ -99,6 +96,7 @@ const Todo = () => {
         },
     });
 
+    // list of todo
     const [todoData, setTodoData] = useState([
         {
             id: 1,
@@ -141,6 +139,8 @@ const Todo = () => {
         },
 
     ])
+
+    // Remove duplicate tags and make unique tags array for use in Tags filter
     const getUniqueTags = () => {
         let arr = [];
         for (let i = 0; i < todoData.length; i++) {
@@ -164,17 +164,21 @@ const Todo = () => {
         }
         return finalArray;
     }
+
+    // New Todo added in a list then update the unique tags array for tags filter
     useEffect(() => {
         const a = getUniqueTags();
         setUniqueTags(a);
     }, [todoData]);
+
+    // Columns show in Table
     const columns = [
         {
             key: 'createAt',
             title: 'Creation Time',
             dataIndex: 'createAt',
             valueType: 'dateTime',
-            sorter:(record1, record2) => {
+            sorter: (record1, record2) => {
                 return record1.createAt - record2.createAt;
             }
         },
@@ -183,33 +187,31 @@ const Todo = () => {
             title: 'Title',
             dataIndex: 'title',
             ...getColumnSearchProps('title'),
-            sorter:(record1, record2) => {
-                return record1.title > record2.title;
-            }
+            sorter: (a, b) => a.title.localeCompare(b.title),
 
         },
         {
             key: 'description',
             title: 'Description',
             dataIndex: 'description',
+            sorter: (a, b) => a.description.localeCompare(b.description),
             ...getColumnSearchProps('description'),
             width: 500,
-            sorter:(record1, record2) => {
-                return record1.description > record2.description;
-            }
+
         },
         {
             key: 'endAt',
             title: 'Due Date',
             dataIndex: 'endAt',
             valueType: 'dateTime',
-            sorter:(record1, record2) => {
+            sorter: (record1, record2) => {
                 return record1.endAt - record2.endAt;
             }
         },
         {
             key: 'tags',
             title: 'Tags',
+            // render tags which assigned in array
             render: (_, { tags }) => (
                 <>
                     {tags.map(tag => {
@@ -226,8 +228,8 @@ const Todo = () => {
             filters: [...uniqueTags],
             onFilter: (value, record) => {
                 const a = record.tags.map(tag => tag === value);
-                for(let i = 0; i < a.length; i++){
-                    if(a[i] === true){
+                for (let i = 0; i < a.length; i++) {
+                    if (a[i] === true) {
                         return true;
                     }
                 }
@@ -242,6 +244,7 @@ const Todo = () => {
                 return (
                     <>
                         {
+                            // When Task time Overdued
                             (Date.now() > record.endAt && record.status !== 'Done') ?
                                 <p>Overdue</p>
                                 :
@@ -276,6 +279,7 @@ const Todo = () => {
         }
     ]
 
+    // Add new todo
     const onFinish = (value) => {
         console.log(value);
         const time = value?.dueDate?._d;
@@ -308,7 +312,6 @@ const Todo = () => {
     const disabledDate = (current) => {
         return current && current < moment().startOf('day');
     };
-
     const disabledDateTime = (current) => ({
         disabledHours: () => {
             if (current < moment().endOf('day')) {
@@ -318,10 +321,14 @@ const Todo = () => {
         },
     });
 
+
+    // Edit existing Task
     const onEditTask = (record) => {
         setModalVisible2(true);
         setEditingTask(record);
     }
+
+    // Delete existing Task
     const onDeleteTask = (record) => {
         console.log(record);
         Modal.confirm({
@@ -337,7 +344,6 @@ const Todo = () => {
     }
 
 
-    const dateFormat = "YYYY-MM-DD";
     return (
         <div style={{
             width: '1200px',
@@ -367,7 +373,7 @@ const Todo = () => {
                 dataSource={todoData}
             ></ProTable>
 
-
+            {/* Modal when add new task in todo */}
             <Modal
                 title="Add a new task"
                 style={{
@@ -441,7 +447,7 @@ const Todo = () => {
             </Modal>
 
 
-            {/* Edit Modal */}
+            {/* Edit Task Modal */}
             <Modal
                 title="Update this task"
                 style={{
